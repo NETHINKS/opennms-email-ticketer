@@ -1,0 +1,93 @@
+/************************************************************
+* e-mail ticketer
+*
+* The e-mail ticketer uses the OpenNMS ticket integration
+* for creating tickets in custom ticket systems by sending 
+* e-mails.
+*
+* @author Michael Batz <michael.batz@nethinks.com>
+*************************************************************/
+
+package org.opennms.netmgt.correlation.drools;
+
+import java.util.List;
+import org.opennms.javamail.JavaMailer;
+import org.opennms.javamail.JavaMailerException;
+import org.opennms.netmgt.xml.event.Event;
+import org.opennms.netmgt.xml.event.Parm;
+import org.opennms.netmgt.model.OnmsAlarm;
+import org.opennms.netmgt.dao.api.AlarmRepository;
+import org.opennms.core.spring.BeanUtils
+
+global java.lang.String MAIL_RECEIVER;
+global java.lang.String MAIL_SUBJECT;
+global org.opennms.netmgt.correlation.drools.DroolsCorrelationEngine engine;
+
+
+rule "ticket create event"
+    when
+        $e : Event( uei  == "uei.opennms.org/troubleTicket/create" )
+    then
+        OnmsAlarm alarm = getAlarmForTicketEvent($e);
+        createTicketForAlarm(alarm, MAIL_RECEIVER, MAIL_SUBJECT);
+        // remove event from working memory
+        retract($e);
+end
+
+/**
+* Gets OnmsAlarm object for ticket Event
+*/
+function OnmsAlarm getAlarmForTicketEvent(Event ticketEvent)
+{
+    //get alarmId from Event
+    String alarmId = getEventParmValue(ticketEvent, "alarmId");
+
+    //get OnmsAlarm
+    AlarmRepository repository = BeanUtils.getBean("daoContext", "alarmRepository", AlarmRepository.class);
+    OnmsAlarm onmsAlarm = repository.getAlarm(new Integer(alarmId));
+
+    return onmsAlarm;
+}
+
+/**
+* Gets an event parameter value
+* @return String value of the event parameter, or an empty string if key does not exist
+*/
+function String getEventParmValue(Event event, String key)
+{
+    //prepare output
+    String result = "";
+
+    //go through all parms
+    List<Parm> eventparms = event.getParmCollection();
+    for(Parm parm : eventparms )
+    {
+        if(parm.getParmName().equals(key))
+        {
+            result = parm.getValue().getContent();
+        }
+    }
+
+    return result;
+}
+
+
+function void createTicketForAlarm(OnmsAlarm alarm, String mailReceiver, String mailSubject)
+{
+    System.out.println(alarm.getLogMsg());
+
+    //create e-mail
+    JavaMailer jm = new JavaMailer();
+    jm.setTo(mailReceiver);
+    jm.setSubject(mailSubject);
+    jm.setMessageText(alarm.getLogMsg());
+
+    try
+    {
+        jm.mailSend();
+    }
+    catch(JavaMailerException e)
+    {
+        System.out.println("Error creating e-mail ticket");
+    }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<engine-configuration 
+	xmlns="http://xmlns.opennms.org/xsd/drools-engine" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://xmlns.opennms.org/xsd/drools-engine /opt/opennms/share/xsds/drools-engine.xsd ">
+  <rule-set name="ticketerRules">
+    <rule-file>ticketerRules.drl</rule-file>
+    <event>uei.opennms.org/troubleTicket/create</event>
+    <global name="MAIL_SUBJECT" type="java.lang.String" value="OpenNMS Alarm"/>
+    <global name="MAIL_RECEIVER" type="java.lang.String" value="example@example.com"/>
+  </rule-set>
+</engine-configuration>
