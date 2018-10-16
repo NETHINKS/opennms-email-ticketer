@@ -31,3 +31,5 @@ Within the definitions of subject and message, the follwing template variables c
 * set `opennms.alarmTroubleTicketEnabled = true` in opennms.properties
 * restart OpenNMS
 
+## supported OpenNMS versions
+This version is developed and tested with OpenNMS Meridian 2017.
