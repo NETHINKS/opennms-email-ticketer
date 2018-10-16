@@ -11,6 +11,8 @@
 package org.opennms.netmgt.correlation.drools;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import org.opennms.javamail.JavaMailer;
 import org.opennms.javamail.JavaMailerException;
 import org.opennms.netmgt.xml.event.Event;
@@ -19,10 +21,14 @@ import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.dao.api.AlarmRepository;
 import org.opennms.netmgt.dao.api.NodeDao;
-import org.opennms.core.spring.BeanUtils
+import org.opennms.core.spring.BeanUtils;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 global java.lang.String MAIL_RECEIVER;
 global java.lang.String MAIL_SUBJECT;
+global java.lang.String MAIL_BODY_FILE;
 global org.opennms.netmgt.correlation.drools.DroolsCorrelationEngine engine;
 
 
@@ -31,13 +37,13 @@ rule "ticket create event"
         $e : Event( uei  == "uei.opennms.org/troubleTicket/create" )
     then
         // create ticket
-        createTicket($e, MAIL_RECEIVER, MAIL_SUBJECT);
+        createTicket($e, MAIL_RECEIVER, MAIL_SUBJECT, MAIL_BODY_FILE);
 
         // remove event from working memory
         retract($e);
 end
 
-function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject)
+function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject, String mailBodyFile)
 {
     //get alarmId from Event
     String alarmId = getEventParmValue(ticketEvent, "alarmId");
@@ -62,12 +68,30 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
         }
     }
 
-    // create message text
-    String message;
-    message = "OpenNMS Alarm";
-    message += "Alarm ID: " + alarm.getId() + "\n";
-    message += "Alarm Node: " + nodeLabel + "\n";
-    message += "Alarm Message: " + alarm.getLogMsg() + "\n";
+    // get message from template file
+    String message = "";
+    try
+    {
+        message = new String(Files.readAllBytes(Paths.get(mailBodyFile)));
+    }
+    catch(IOException e)
+    {
+        System.out.println("Drools ticketer: Could not find mail body file");
+        return;
+    }
+
+    // replace template variables
+    Map<String, String> templateVars = new HashMap<>();
+    templateVars.put("node_label", nodeLabel);
+    templateVars.put("alarm_id", alarm.getId().toString());
+    templateVars.put("alarm_uei", alarm.getUei());
+    templateVars.put("alarm_sev", alarm.getSeverityLabel());
+    templateVars.put("alarm_logmsg", alarm.getLogMsg());
+    for(Map.Entry<String,String> entry : templateVars.entrySet())
+    {
+        mailSubject = mailSubject.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        message = message.replace("{{" + entry.getKey() + "}}", entry.getValue());
+    }
 
     //send e-mail
     sendMail(mailReceiver, mailSubject, message);
@@ -107,6 +131,7 @@ function void sendMail(String receiver, String subject, String message)
     jm.setMessageText(message);
 
     // send mail
+    System.out.println(subject);
     System.out.println(message);
     try
     {
