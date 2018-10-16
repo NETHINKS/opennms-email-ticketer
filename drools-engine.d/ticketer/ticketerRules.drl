@@ -131,8 +131,6 @@ function void sendMail(String receiver, String subject, String message)
     jm.setMessageText(message);
 
     // send mail
-    System.out.println(subject);
-    System.out.println(message);
     try
     {
         jm.mailSend();
