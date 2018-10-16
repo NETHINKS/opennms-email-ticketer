@@ -16,7 +16,9 @@ import org.opennms.javamail.JavaMailerException;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xml.event.Parm;
 import org.opennms.netmgt.model.OnmsAlarm;
+import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.dao.api.AlarmRepository;
+import org.opennms.netmgt.dao.api.NodeDao;
 import org.opennms.core.spring.BeanUtils
 
 global java.lang.String MAIL_RECEIVER;
@@ -28,26 +30,50 @@ rule "ticket create event"
     when
         $e : Event( uei  == "uei.opennms.org/troubleTicket/create" )
     then
-        OnmsAlarm alarm = getAlarmForTicketEvent($e);
-        createTicketForAlarm(alarm, MAIL_RECEIVER, MAIL_SUBJECT);
+        // create ticket
+        createTicket($e, MAIL_RECEIVER, MAIL_SUBJECT);
+
         // remove event from working memory
         retract($e);
 end
 
-/**
-* Gets OnmsAlarm object for ticket Event
-*/
-function OnmsAlarm getAlarmForTicketEvent(Event ticketEvent)
+function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject)
 {
     //get alarmId from Event
     String alarmId = getEventParmValue(ticketEvent, "alarmId");
 
     //get OnmsAlarm
     AlarmRepository repository = BeanUtils.getBean("daoContext", "alarmRepository", AlarmRepository.class);
-    OnmsAlarm onmsAlarm = repository.getAlarm(new Integer(alarmId));
+    OnmsAlarm alarm = repository.getAlarm(new Integer(alarmId));
+    if(alarm == null)
+    {
+        System.out.println("Drools ticketer: Could not find alarm " + alarmId);
+        return;
+    }
 
-    return onmsAlarm;
+    //get nodeLabel, if node exists
+    String nodeLabel = "";
+    if(alarm.getNodeId() != null)
+    {
+        OnmsNode node = BeanUtils.getBean("daoContext", "nodeDao", NodeDao.class).get(new Long(alarm.getNodeId()).intValue());
+        if(node != null)
+        {
+            nodeLabel = node.getLabel();
+        }
+    }
+
+    // create message text
+    String message;
+    message = "OpenNMS Alarm";
+    message += "Alarm ID: " + alarm.getId() + "\n";
+    message += "Alarm Node: " + nodeLabel + "\n";
+    message += "Alarm Message: " + alarm.getLogMsg() + "\n";
+
+    //send e-mail
+    sendMail(mailReceiver, mailSubject, message);
 }
+
+
 
 /**
 * Gets an event parameter value
@@ -72,22 +98,22 @@ function String getEventParmValue(Event event, String key)
 }
 
 
-function void createTicketForAlarm(OnmsAlarm alarm, String mailReceiver, String mailSubject)
+function void sendMail(String receiver, String subject, String message)
 {
-    System.out.println(alarm.getLogMsg());
-
-    //create e-mail
+    // create e-mail
     JavaMailer jm = new JavaMailer();
-    jm.setTo(mailReceiver);
-    jm.setSubject(mailSubject);
-    jm.setMessageText(alarm.getLogMsg());
+    jm.setTo(receiver);
+    jm.setSubject(subject);
+    jm.setMessageText(message);
 
+    // send mail
+    System.out.println(message);
     try
     {
         jm.mailSend();
     }
     catch(JavaMailerException e)
     {
-        System.out.println("Error creating e-mail ticket");
+        System.out.println("Drools ticketr: Error creating e-mail ticket");
     }
 }
