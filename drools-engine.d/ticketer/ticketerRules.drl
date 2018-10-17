@@ -45,8 +45,9 @@ end
 
 function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject, String mailBodyFile)
 {
-    //get alarmId from Event
+    //get alarm details from Event
     String alarmId = getEventParmValue(ticketEvent, "alarmId");
+    String alarmUser = getEventParmValue(ticketEvent, "user");
 
     //get OnmsAlarm
     AlarmRepository repository = BeanUtils.getBean("daoContext", "alarmRepository", AlarmRepository.class);
@@ -83,7 +84,8 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
     // replace template variables
     Map<String, String> templateVars = new HashMap<>();
     templateVars.put("node_label", nodeLabel);
-    templateVars.put("alarm_id", alarm.getId().toString());
+    templateVars.put("alarm_id", alarmId);
+    templateVars.put("alarm_user", alarmUser);
     templateVars.put("alarm_uei", alarm.getUei());
     templateVars.put("alarm_sev", alarm.getSeverityLabel());
     templateVars.put("alarm_logmsg", alarm.getLogMsg());

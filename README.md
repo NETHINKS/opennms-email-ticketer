@@ -15,6 +15,7 @@ Within the definitions of subject and message, the follwing template variables c
 
 * {{node\_label}}
 * {{alarm\_id}}
+* {{alarm\_user}} (OpenNMS user, who created the ticket)
 * {{alarm\_uei}}
 * {{alarm\_sev}} (alarm severity)
 * {{alarm\_logmsg}}
