@@ -45,7 +45,7 @@ end
 
 function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject, String mailBodyFile)
 {
-    //get alarm details from Event
+    //get alarm details from ticket create event
     String alarmId = getEventParmValue(ticketEvent, "alarmId");
     String alarmUser = getEventParmValue(ticketEvent, "user");
 
@@ -58,14 +58,81 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
         return;
     }
 
-    //get nodeLabel, if node exists
-    String nodeLabel = "";
+    // init template variables
+    Map<String, String> templateVars = new HashMap<>();
+    // template vars: alarm details
+    templateVars.put("alarm_id", alarmId);
+    templateVars.put("alarm_user", alarmUser);
+    templateVars.put("alarm_uei", alarm.getUei());
+    templateVars.put("alarm_sev", alarm.getSeverityLabel());
+    templateVars.put("alarm_logmsg", alarm.getLogMsg());
+    // template vars: node details
     if(alarm.getNodeId() != null)
     {
         OnmsNode node = BeanUtils.getBean("daoContext", "nodeDao", NodeDao.class).get(new Long(alarm.getNodeId()).intValue());
+        // if node exists, create template vars
         if(node != null)
         {
-            nodeLabel = node.getLabel();
+            // node label
+            templateVars.put("node_label", node.getLabel());
+            // node assets
+            templateVars.put("node_asset_additionalhardware", node.getAssetRecord().getAdditionalhardware());
+            templateVars.put("node_asset_address1", node.getAssetRecord().getAddress1());
+            templateVars.put("node_asset_address2", node.getAssetRecord().getAddress2());
+            templateVars.put("node_asset_admin", node.getAssetRecord().getAdmin());
+            templateVars.put("node_asset_autoenable", node.getAssetRecord().getAutoenable());
+            templateVars.put("node_asset_building", node.getAssetRecord().getBuilding());
+            templateVars.put("node_asset_category", node.getAssetRecord().getCategory());
+            templateVars.put("node_asset_circuitid", node.getAssetRecord().getCircuitId());
+            templateVars.put("node_asset_city", node.getAssetRecord().getCity());
+            templateVars.put("node_asset_comment", node.getAssetRecord().getComment());
+            templateVars.put("node_asset_connection", node.getAssetRecord().getConnection());
+            templateVars.put("node_asset_country", node.getAssetRecord().getCountry());
+            templateVars.put("node_asset_cpu", node.getAssetRecord().getCpu());
+            templateVars.put("node_asset_dateinstalled", node.getAssetRecord().getDateInstalled());
+            templateVars.put("node_asset_department", node.getAssetRecord().getDepartment());
+            templateVars.put("node_asset_description", node.getAssetRecord().getDescription());
+            templateVars.put("node_asset_displaycategory", node.getAssetRecord().getDisplayCategory());
+            templateVars.put("node_asset_division", node.getAssetRecord().getDivision());
+            templateVars.put("node_asset_enable", node.getAssetRecord().getEnable());
+            templateVars.put("node_asset_floor", node.getAssetRecord().getFloor());
+            templateVars.put("node_asset_hdd1", node.getAssetRecord().getHdd1());
+            templateVars.put("node_asset_hdd2", node.getAssetRecord().getHdd2());
+            templateVars.put("node_asset_hdd3", node.getAssetRecord().getHdd3());
+            templateVars.put("node_asset_hdd4", node.getAssetRecord().getHdd4());
+            templateVars.put("node_asset_hdd5", node.getAssetRecord().getHdd5());
+            templateVars.put("node_asset_hdd6", node.getAssetRecord().getHdd6());
+            templateVars.put("node_asset_inputpower", node.getAssetRecord().getInputpower());
+            templateVars.put("node_asset_lease", node.getAssetRecord().getLease());
+            templateVars.put("node_asset_leaseexpires", node.getAssetRecord().getLeaseExpires());
+            templateVars.put("node_asset_maincontract", node.getAssetRecord().getMaintcontract());
+            templateVars.put("node_asset_maincontractexpiration", node.getAssetRecord().getMaintContractExpiration());
+            templateVars.put("node_asset_manufacturer", node.getAssetRecord().getManufacturer());
+            templateVars.put("node_asset_modelnumber", node.getAssetRecord().getModelNumber());
+            templateVars.put("node_asset_notifycategory", node.getAssetRecord().getNotifyCategory());
+            templateVars.put("node_asset_numpowersupplies", node.getAssetRecord().getNumpowersupplies());
+            templateVars.put("node_asset_operatingsystem", node.getAssetRecord().getOperatingSystem());
+            templateVars.put("node_asset_password", node.getAssetRecord().getPassword());
+            templateVars.put("node_asset_pollercategory", node.getAssetRecord().getPollerCategory());
+            templateVars.put("node_asset_port", node.getAssetRecord().getPort());
+            templateVars.put("node_asset_rack", node.getAssetRecord().getRack());
+            templateVars.put("node_asset_rackunitheight", node.getAssetRecord().getRackunitheight());
+            templateVars.put("node_asset_ram", node.getAssetRecord().getRam());
+            templateVars.put("node_asset_region", node.getAssetRecord().getRegion());
+            templateVars.put("node_asset_room", node.getAssetRecord().getRoom());
+            templateVars.put("node_asset_serialnumber", node.getAssetRecord().getSerialNumber());
+            templateVars.put("node_asset_slot", node.getAssetRecord().getSlot());
+            templateVars.put("node_asset_snmpcommunity", node.getAssetRecord().getSnmpcommunity());
+            templateVars.put("node_asset_state", node.getAssetRecord().getState());
+            templateVars.put("node_asset_storagectl", node.getAssetRecord().getStoragectrl());
+            templateVars.put("node_asset_supportphone", node.getAssetRecord().getSupportPhone());
+            templateVars.put("node_asset_thresholdcategory", node.getAssetRecord().getThresholdCategory());
+            templateVars.put("node_asset_username", node.getAssetRecord().getUsername());
+            templateVars.put("node_asset_vendor", node.getAssetRecord().getVendor());
+            templateVars.put("node_asset_vendorassetnumber", node.getAssetRecord().getVendorAssetNumber());
+            templateVars.put("node_asset_vendorfax", node.getAssetRecord().getVendorFax());
+            templateVars.put("node_asset_vendorphone", node.getAssetRecord().getVendorPhone());
+            templateVars.put("node_asset_zip", node.getAssetRecord().getZip());
         }
     }
 
@@ -81,19 +148,21 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
         return;
     }
 
-    // replace template variables
-    Map<String, String> templateVars = new HashMap<>();
-    templateVars.put("node_label", nodeLabel);
-    templateVars.put("alarm_id", alarmId);
-    templateVars.put("alarm_user", alarmUser);
-    templateVars.put("alarm_uei", alarm.getUei());
-    templateVars.put("alarm_sev", alarm.getSeverityLabel());
-    templateVars.put("alarm_logmsg", alarm.getLogMsg());
+    // replace template variables in subject and message
     for(Map.Entry<String,String> entry : templateVars.entrySet())
     {
-        mailSubject = mailSubject.replace("{{" + entry.getKey() + "}}", entry.getValue());
-        message = message.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        String key = entry.getKey();
+        String value = entry.getValue();
+        if(value == null)
+        {
+            value = "";
+        }
+        mailSubject = mailSubject.replace("{{" + key + "}}", value);
+        message = message.replace("{{" + key + "}}", value);
     }
+    // replace undefined template variables in subject and message with empty string
+    mailSubject = mailSubject.replaceAll("\\Q{{\\E[a-zA-Z_0-9]+\\Q}}\\E", "");
+    message = message.replaceAll("\\Q{{\\E[a-zA-Z_0-9]+\\Q}}\\E", "");
 
     //send e-mail
     sendMail(mailReceiver, mailSubject, message);

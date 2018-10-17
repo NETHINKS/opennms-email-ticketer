@@ -13,12 +13,13 @@ Receiver, subject and message text of the mails are fully configurable. Receiver
 
 Within the definitions of subject and message, the follwing template variables can be used and will be replaced by the current values of the given alarm:
 
-* {{node\_label}}
 * {{alarm\_id}}
 * {{alarm\_user}} (OpenNMS user, who created the ticket)
 * {{alarm\_uei}}
 * {{alarm\_sev}} (alarm severity)
 * {{alarm\_logmsg}}
+* {{node\_label}}
+* {{node\_asset\_<key>}} (e.g. {{node\_asset\_city}})
 
 ## setup
 
