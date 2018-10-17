@@ -25,10 +25,10 @@ import org.opennms.core.spring.BeanUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Properties;
+import java.io.FileInputStream;
 
-global java.lang.String MAIL_RECEIVER;
-global java.lang.String MAIL_SUBJECT;
-global java.lang.String MAIL_BODY_FILE;
+global java.lang.String CONFIG_FILENAME;
 global org.opennms.netmgt.correlation.drools.DroolsCorrelationEngine engine;
 
 
@@ -37,19 +37,33 @@ rule "ticket create event"
         $e : Event( uei  == "uei.opennms.org/troubleTicket/create" )
     then
         // create ticket
-        createTicket($e, MAIL_RECEIVER, MAIL_SUBJECT, MAIL_BODY_FILE);
+        createTicket($e, CONFIG_FILENAME);
 
         // remove event from working memory
         retract($e);
 end
 
-function void createTicket(Event ticketEvent, String mailReceiver, String mailSubject, String mailBodyFile)
+function void createTicket(Event ticketEvent, String configurationFile)
 {
-    //get alarm details from ticket create event
+    // load configuration file
+    Properties configuration = new Properties();
+    try
+    {
+        FileInputStream stream = new FileInputStream(configurationFile);
+        configuration.load(stream);
+        stream.close();
+    }
+    catch(IOException e)
+    {
+        System.out.println("Drools ticketer: Could not load configuration file");
+        return;
+    }
+
+    // get alarm details from ticket create event
     String alarmId = getEventParmValue(ticketEvent, "alarmId");
     String alarmUser = getEventParmValue(ticketEvent, "user");
 
-    //get OnmsAlarm
+    // get OnmsAlarm
     AlarmRepository repository = BeanUtils.getBean("daoContext", "alarmRepository", AlarmRepository.class);
     OnmsAlarm alarm = repository.getAlarm(new Integer(alarmId));
     if(alarm == null)
@@ -136,7 +150,9 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
         }
     }
 
-    // get message from template file
+    // load message and subject template
+    String mailSubject = configuration.getProperty("subject", "OpenNMS Alarm {{alarm_id}}");
+    String mailBodyFile = configuration.getProperty("message.template", "mailbody.tpl");
     String message = "";
     try
     {
@@ -164,8 +180,13 @@ function void createTicket(Event ticketEvent, String mailReceiver, String mailSu
     mailSubject = mailSubject.replaceAll("\\Q{{\\E[a-zA-Z_0-9]+\\Q}}\\E", "");
     message = message.replaceAll("\\Q{{\\E[a-zA-Z_0-9]+\\Q}}\\E", "");
 
-    //send e-mail
-    sendMail(mailReceiver, mailSubject, message);
+    // get from address from configuration
+    String mailSender = configuration.getProperty("user." + alarmUser + ".mail");
+
+
+    // send e-mail
+    String mailReceiver = configuration.getProperty("receiver", "example@example.com");
+    sendMail(mailSender, mailReceiver, mailSubject, message);
 }
 
 
@@ -193,10 +214,14 @@ function String getEventParmValue(Event event, String key)
 }
 
 
-function void sendMail(String receiver, String subject, String message)
+function void sendMail(String sender, String receiver, String subject, String message)
 {
     // create e-mail
     JavaMailer jm = new JavaMailer();
+    if(sender != null)
+    {
+        jm.setFrom(sender);
+    }
     jm.setTo(receiver);
     jm.setSubject(subject);
     jm.setMessageText(message);

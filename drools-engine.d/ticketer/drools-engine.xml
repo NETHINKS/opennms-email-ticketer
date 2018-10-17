@@ -6,8 +6,6 @@
   <rule-set name="ticketerRules">
     <rule-file>ticketerRules.drl</rule-file>
     <event>uei.opennms.org/troubleTicket/create</event>
-    <global name="MAIL_SUBJECT" type="java.lang.String" value="Incident: {{node_label}}, Severity: {{alarm_sev}}, {{alarm_uei}}"/>
-    <global name="MAIL_BODY_FILE" type="java.lang.String" value="/opt/opennms/etc/drools-engine.d/ticketer/mailbody.tpl"/>
-    <global name="MAIL_RECEIVER" type="java.lang.String" value="example@example.com"/>
+    <global name="CONFIG_FILENAME" type="java.lang.String" value="/opt/opennms/etc/drools-engine.d/ticketer/ticketer-configuration.properties"/>
   </rule-set>
 </engine-configuration>
