@@ -67,7 +67,16 @@ function void createTicket(Event ticketEvent, String configurationFile)
 
     // get OnmsAlarm
     AlarmRepository repository = BeanUtils.getBean("daoContext", "alarmRepository", AlarmRepository.class);
-    OnmsAlarm alarm = repository.getAlarm(new Integer(alarmId));
+    OnmsAlarm alarm;
+    try
+    {
+        alarm = repository.getAlarm(new Integer(alarmId));
+    }
+    catch(NumberFormatException e)
+    {
+        System.out.println("Drools ticketer: Could not find alarm because alarmId is invalid");
+        return;
+    }
     if(alarm == null)
     {
         System.out.println("Drools ticketer: Could not find alarm " + alarmId);
